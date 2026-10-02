@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+      <base href="https://cdn.jsdelivr.net/gh/thecheetoman/ESimWeb@latest/">
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Unity WebGL Player | ESim</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      #unity-container,
+      #unity-container.unity-desktop,
+      #unity-container.unity-mobile {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        transform: none;
+      }
+
+      #unity-canvas,
+      .unity-mobile #unity-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #loading-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #0d0d0d;
+        color: #e0e0e0;
+        font-family: Verdana, monospace;
+        transition: opacity 0.6s ease;
+      }
+
+      #loading-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #loading-title {
+        margin-bottom: 4px;
+        color: #fff;
+        font-size: 2rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+
+      #loading-progress {
+        width: min(280px, calc(100vw - 48px));
+        height: 3px;
+        overflow: hidden;
+        background: #2a2a2a;
+      }
+
+      #loading-progress-fill {
+        width: 0;
+        height: 100%;
+        background: #fff;
+        transition: width 0.2s ease;
+      }
+
+      #loading-download {
+        min-height: 1.4em;
+        color: #aaa;
+        font-size: 1rem;
+      }
+
+      #loading-hint {
+        color: #666;
+        font-size: 0.7rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-overlay" role="status" aria-live="polite">
+      <div id="loading-title">ESim</div>
+      <div id="loading-progress" aria-hidden="true">
+        <div id="loading-progress-fill"></div>
+      </div>
+      <div id="loading-download">Preparing download...</div>
+      <div id="loading-hint">Loading game assets</div>
+    </div>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+      <div id="unity-warning"> </div>
+    </div>
+    <script>
+
+      var canvas = document.querySelector("#unity-canvas");
+      var warningBanner = document.querySelector("#unity-warning");
+      var loadingOverlay = document.querySelector("#loading-overlay");
+      var loadingProgressFill = document.querySelector("#loading-progress-fill");
+      var loadingDownload = document.querySelector("#loading-download");
+      var loadingHint = document.querySelector("#loading-hint");
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/Web.loader.js";
+      var config = {
+        dataUrl: "",
+        frameworkUrl: buildUrl + "/Web.framework.js",
+        codeUrl: "",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "ESim",
+        productVersion: "0.1",
+        showBanner: unityShowBanner,
+      };
+
+      // By default, Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
+
+      // If you would like all file writes inside Unity Application.persistentDataPath
+      // directory to automatically persist so that the contents are remembered when
+      // the user revisits the site the next time, uncomment the following line:
+      // config.autoSyncPersistentDataPath = true;
+      // This autosyncing is currently not the default behavior to avoid regressing
+      // existing user projects that might rely on the earlier manual
+      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
+      // expected to change.
+
+      async function loadChunkedAsset(assetParts, contentType, totalBytes) {
+        const chunks = await Promise.all(assetParts.map(async ({ file }) => {
+          const response = await fetch(buildUrl + "/" + file);
+          if (!response.ok) {
+            throw new Error("Unable to load " + file + ": " + response.status);
+          }
+          const reader = response.body.getReader();
+          const chunkData = [];
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunkData.push(value);
+            bytesDownloaded += value.byteLength;
+            updateDownloadProgress(totalBytes);
+          }
+          return new Blob(chunkData, { type: contentType });
+        }));
+        return URL.createObjectURL(new Blob(chunks, { type: contentType }));
+      }
+
+      var bytesDownloaded = 0;
+      var assetsTotalBytes = 0;
+
+      function updateDownloadProgress(totalBytes) {
+        var downloadedMb = (bytesDownloaded / (1024 * 1024)).toFixed(1);
+        var totalMb = (totalBytes / (1024 * 1024)).toFixed(1);
+        loadingDownload.textContent = downloadedMb + " MB of " + totalMb + " MB downloaded";
+        loadingProgressFill.style.width = (totalBytes ? bytesDownloaded / totalBytes * 75 : 0) + "%";
+      }
+
+      function hideLoadingOverlay() {
+        loadingOverlay.classList.add("hidden");
+        setTimeout(() => loadingOverlay.remove(), 700);
+      }
+
+      async function startUnity() {
+        const manifestResponse = await fetch(buildUrl + "/assets.json");
+        if (!manifestResponse.ok) {
+          throw new Error("Unable to load Build/assets.json. Run scripts/split-unity-assets.mjs first.");
+        }
+        const assets = await manifestResponse.json();
+        assetsTotalBytes = assets.sizes.data.concat(assets.sizes.wasm).reduce((sum, size) => sum + size, 0);
+        updateDownloadProgress(assetsTotalBytes);
+        [config.dataUrl, config.codeUrl] = await Promise.all([
+          loadChunkedAsset(assets.data, "application/octet-stream", assetsTotalBytes),
+          loadChunkedAsset(assets.wasm, "application/wasm", assetsTotalBytes),
+        ]);
+
+        const script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+          createUnityInstance(canvas, config, (progress) => {
+            loadingHint.textContent = "Starting game";
+            loadingProgressFill.style.width = (75 + 25 * progress) + "%";
+          }).then(() => {
+            hideLoadingOverlay();
+          }).catch((message) => {
+            loadingHint.textContent = "Unable to start game";
+            loadingDownload.textContent = message;
+            unityShowBanner(message, "error");
+          });
+        };
+        script.onerror = () => {
+          var message = "Unable to load the Unity loader: " + loaderUrl;
+          loadingHint.textContent = "Unable to start game";
+          loadingDownload.textContent = message;
+          unityShowBanner(message, "error");
+        };
+        document.body.appendChild(script);
+      }
+
+      startUnity().catch((error) => {
+        loadingHint.textContent = "Unable to load game assets";
+        loadingDownload.textContent = error.message;
+        unityShowBanner(error.message, "error");
+      });
+
+    </script>
+  </body>
+</html>

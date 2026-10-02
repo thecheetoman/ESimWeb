@@ -1,0 +1,48 @@
+{
+  "sizes": {
+    "data": [
+      19922944,
+      19922944,
+      19922944,
+      19922944,
+      19922944,
+      357986
+    ],
+    "wasm": [
+      19922944,
+      19922944,
+      7795601
+    ]
+  },
+  "data": [
+    {
+      "file": "Web.data.part000"
+    },
+    {
+      "file": "Web.data.part001"
+    },
+    {
+      "file": "Web.data.part002"
+    },
+    {
+      "file": "Web.data.part003"
+    },
+    {
+      "file": "Web.data.part004"
+    },
+    {
+      "file": "Web.data.part005"
+    }
+  ],
+  "wasm": [
+    {
+      "file": "Web.wasm.part000"
+    },
+    {
+      "file": "Web.wasm.part001"
+    },
+    {
+      "file": "Web.wasm.part002"
+    }
+  ]
+}
