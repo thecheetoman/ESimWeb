@@ -7,8 +7,16 @@ const buildDir = path.join(projectDir, "Build");
 const maxChunkBytes = 19 * 1024 * 1024;
 const assets = { sizes: {} };
 
+const dataFiles = await readdir(buildDir);
+const dataFile = dataFiles.find((name) => name.endsWith(".data") && !/\.part\d{3,}$/.test(name));
+if (!dataFile) {
+  throw new Error("No Unity .data file found in Build directory");
+}
+const prefix = dataFile.slice(0, -".data".length);
+console.log(`Detected build prefix: ${prefix}`);
+
 for (const extension of ["data", "wasm"]) {
-  const fileName = `Web.${extension}`;
+  const fileName = `${prefix}.${extension}`;
   const filePath = path.join(buildDir, fileName);
   const partPattern = new RegExp(`^${fileName.replace(".", "\\.")}\\.part\\d{3,}$`);
   const existingParts = (await readdir(buildDir)).filter((name) => partPattern.test(name)).sort();

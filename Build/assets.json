@@ -6,43 +6,51 @@
       19922944,
       19922944,
       19922944,
-      1259624
+      19922944,
+      19922944,
+      15510709
     ],
     "wasm": [
       19922944,
       19922944,
-      7814827
+      7850327
     ]
   },
   "data": [
     {
-      "file": "Web.data.part000"
+      "file": "ESimWeb.data.part000"
     },
     {
-      "file": "Web.data.part001"
+      "file": "ESimWeb.data.part001"
     },
     {
-      "file": "Web.data.part002"
+      "file": "ESimWeb.data.part002"
     },
     {
-      "file": "Web.data.part003"
+      "file": "ESimWeb.data.part003"
     },
     {
-      "file": "Web.data.part004"
+      "file": "ESimWeb.data.part004"
     },
     {
-      "file": "Web.data.part005"
+      "file": "ESimWeb.data.part005"
+    },
+    {
+      "file": "ESimWeb.data.part006"
+    },
+    {
+      "file": "ESimWeb.data.part007"
     }
   ],
   "wasm": [
     {
-      "file": "Web.wasm.part000"
+      "file": "ESimWeb.wasm.part000"
     },
     {
-      "file": "Web.wasm.part001"
+      "file": "ESimWeb.wasm.part001"
     },
     {
-      "file": "Web.wasm.part002"
+      "file": "ESimWeb.wasm.part002"
     }
   ]
 }
